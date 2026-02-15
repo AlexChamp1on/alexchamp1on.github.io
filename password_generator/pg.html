@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberPass Pro - Hacker Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-blue: #00ffff;
+            --neon-pink: #ff00ff;
+            --dark-bg: #05050a;
+            --low-power: #ff4d4d;
+        }
+
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: var(--dark-bg);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--neon-blue);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ФОНОВОЕ ВИДЕО С ХАКЕРОМ */
+        .background-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(0.4) blur(3px) contrast(1.2);
+            z-index: -2;
+        }
+
+        .background-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%);
+            z-index: -1;
+        }
+
+        /* КАРТОЧКА ИНТЕРФЕЙСА */
+        .card {
+            background: rgba(0, 0, 0, 0.9);
+            padding: 2.5rem;
+            border: 2px solid var(--neon-blue);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2), inset 0 0 15px rgba(0, 255, 255, 0.1);
+            width: 90%;
+            max-width: 480px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .terminal-header {
+            color: var(--neon-pink);
+            text-shadow: 0 0 10px var(--neon-pink);
+            font-size: 0.7rem;
+            margin-bottom: 25px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        /* ОКНО ВЫВОДА ПАРОЛЯ */
+        .output-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        #myNumber {
+            background: rgba(0, 0, 0, 0.85);
+            padding: 22px 10px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.9rem; /* Чуть меньше шрифт для длинных паролей */
+            min-height: 45px;
+            border: 1px solid var(--neon-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            word-break: break-all;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        #myNumber:hover { background: rgba(0, 255, 255, 0.05); }
+
+        .strength-bar {
+            height: 4px;
+            width: 100%;
+            background: #111;
+            margin-top: -1px;
+        }
+
+        #strength-fill {
+            height: 100%;
+            width: 0%;
+            transition: 0.5s ease;
+        }
+
+        /* НАСТРОЙКИ (1PASSWORD STYLE) */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 25px;
+            text-align: left;
+            font-size: 0.65rem;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--neon-blue);
+        }
+
+        input[type="checkbox"] {
+            appearance: none;
+            width: 14px; height: 14px;
+            border: 1px solid var(--neon-blue);
+            background: transparent;
+            cursor: pointer;
+            position: relative;
+        }
+
+        input[type="checkbox"]:checked { background: var(--neon-blue); }
+        input[type="checkbox"]:checked::after { content: "✔"; color: #000; position: absolute; font-size: 10px; left: 2px; }
+
+        input[type=range] { 
+            width: 100%; 
+            accent-color: var(--neon-pink); 
+            cursor: pointer;
+            margin: 10px 0;
+        }
+
+        .btn-main {
+            background: transparent;
+            color: var(--neon-blue);
+            border: 2px solid var(--neon-blue);
+            padding: 16px;
+            width: 100%;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 25px;
+            letter-spacing: 2px;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+
+        .btn-main:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 20px var(--neon-blue);
+        }
+
+        .char {
+            display: inline-block;
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-pink), var(--neon-blue));
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: neonFlow 2s linear infinite;
+        }
+        @keyframes neonFlow { to { background-position: 200% center; } }
+
+        .copied-msg {
+            position: absolute;
+            top: -20px;
+            right: 0;
+            font-size: 0.6rem;
+            color: var(--neon-pink);
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <video class="background-video" autoplay loop muted playsinline>
+        <source src="https://videos.pexels.com/video-files/3268875/3268875-uhd_2560_1440_25fps.mp4" type="video/mp4">
+    </video>
+    <div class="background-overlay"></div>
+
+    <div class="card">
+        <div class="terminal-header">Hacker_Vault_v6.0</div>
+        
+        <div class="output-container">
+            <div id="copied-label" class="copied-msg">BUFFER_UPDATED</div>
+            <div id="myNumber" onclick="copyPassword()">
+                <span id="pass-text"></span><span id="cursor" class="char">|</span>
+            </div>
+            <div class="strength-bar">
+                <div id="strength-fill"></div>
+            </div>
+        </div>
+
+        <form name="passForm">
+            <div style="display:flex; justify-content:space-between; font-size: 0.75rem;">
+                <span>KEY_LENGTH:</span>
+                <span id="lenValue" style="color:var(--neon-pink)">16</span>
+            </div>
+            <input name="lengthSlider" type="range" min="6" max="25" value="16" 
+                oninput="document.getElementById('lenValue').innerHTML=this.value; generateCyberPass();" />
+
+            <div class="settings-grid">
+                <div class="control-group">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="useNumbers" checked onchange="generateCyberPass()"> NUMBERS [0-9]
+                    </label>
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="useSymbols" checked onchange="generateCyberPass()"> SYMBOLS [#&?]
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="useUpper" checked onchange="generateCyberPass()"> UPPERCASE [A-Z]
+                    </label>
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="useLower" checked onchange="generateCyberPass()"> LOWERCASE [a-z]
+                    </label>
+                </div>
+            </div>
+
+            <input type="button" class="btn-main" value="INITIATE GENERATION" onclick="generateCyberPass();" />
+        </form>
+    </div>
+
+    <script>
+        const charSets = {
+            lower: "abcdefghijklmnopqrstuvwxyz",
+            upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+            numbers: "0123456789",
+            symbols: "!@#$%^&*()_+-=[]{}|;:,.<>?"
+        };
+
+        let typingTimer = null;
+
+        function generateCyberPass() {
+            if (typingTimer !== null) clearInterval(typingTimer);
+
+            const length = parseInt(document.forms.passForm.lengthSlider.value);
+            let allowedChars = "";
+            
+            if (document.getElementById('useLower').checked) allowedChars += charSets.lower;
+            if (document.getElementById('useUpper').checked) allowedChars += charSets.upper;
+            if (document.getElementById('useNumbers').checked) allowedChars += charSets.numbers;
+            if (document.getElementById('useSymbols').checked) allowedChars += charSets.symbols;
+
+            const display = document.getElementById('pass-text');
+            display.innerHTML = '';
+            
+            if (allowedChars === "") {
+                display.innerHTML = '<span style="color:var(--low-power); font-size:10px;">SELECT_CHAR_SET</span>';
+                updateStrength(0);
+                return;
+            }
+
+            let result = "";
+            for (let i = 0; i < length; i++) {
+                result += allowedChars.charAt(Math.floor(Math.random() * allowedChars.length));
+            }
+
+            let j = 0;
+            typingTimer = setInterval(() => {
+                if (j < result.length) {
+                    const span = document.createElement('span');
+                    span.className = 'char';
+                    span.innerText = result[j];
+                    display.appendChild(span);
+                    j++;
+                } else {
+                    clearInterval(typingTimer);
+                    typingTimer = null;
+                }
+            }, 35);
+
+            updateStrength(length, allowedChars.length);
+        }
+
+        function updateStrength(len, poolSize) {
+            const fill = document.getElementById('strength-fill');
+            // Максимальная сложность при 25 символах
+            let strength = (len * Math.log2(poolSize || 1)) / 1.5; 
+            strength = Math.min(strength, 100);
+            
+            fill.style.width = strength + "%";
+            if (strength < 45) {
+                fill.style.background = 'var(--low-power)';
+                fill.style.boxShadow = '0 0 10px var(--low-power)';
+            } else if (strength < 75) {
+                fill.style.background = 'orange';
+                fill.style.boxShadow = '0 0 10px orange';
+            } else {
+                fill.style.background = 'var(--neon-blue)';
+                fill.style.boxShadow = '0 0 15px var(--neon-blue)';
+            }
+        }
+
+        function copyPassword() {
+            const text = document.getElementById('pass-text').innerText;
+            if (!text || text.includes("SELECT")) return;
+            
+            navigator.clipboard.writeText(text);
+            const label = document.getElementById('copied-label');
+            label.style.display = 'block';
+            setTimeout(() => label.style.display = 'none', 1500);
+        }
+
+        window.onload = generateCyberPass;
+    </script>
+</body>
+</html>
