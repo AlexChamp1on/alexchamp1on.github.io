@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Сонячна система: Виправлене натискання</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            background-image: 
+                radial-gradient(circle at center, #111 0%, #000 90%),
+                url('https://www.transparenttextures.com/patterns/stardust.png');
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .viewport {
+            display: flex;
+            width: 100vw;
+            justify-content: center;
+            align-items: center;
+            gap: 12vh;
+        }
+
+        /* КОНТЕЙНЕР СИСТЕМИ ЗЕМЛЯ-МІСЯЦЬ */
+        .earth-system {
+            position: relative;
+            width: 48vh; 
+            height: 48vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .space-link {
+            text-decoration: none;
+            transition: transform 0.4s ease;
+            outline: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 20; /* Земля тепер на найвищому рівні для кліку */
+        }
+
+        .object {
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        /* ЗЕМЛЯ */
+        .earth {
+            width: 28vh;
+            height: 28vh;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Earth_Western_Hemisphere_transparent_background.png/600px-Earth_Western_Hemisphere_transparent_background.png');
+            animation: rotate-object 45s linear infinite;
+        }
+
+        /* ОРБІТА МІСЯЦЯ */
+        .moon-orbit {
+            position: absolute;
+            width: 44vh;
+            height: 44vh;
+            border: 3px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            animation: rotate-object 15s linear infinite;
+            z-index: 5;
+            /* ВАЖЛИВО: ігноруємо кліки по самій лінії орбіти, щоб не заважати Землі */
+            pointer-events: none; 
+        }
+
+        /* МІСЯЦЬ ЯК ПОСИЛАННЯ */
+        .moon-link {
+            position: absolute;
+            top: -3vh;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 25; /* Місяць ще вище за Землю, щоб його теж було легко натиснути */
+            pointer-events: auto; /* Повертаємо можливість кліку тільки для Місяця */
+            transition: transform 0.3s ease;
+        }
+
+        .moon-link:hover {
+            transform: translateX(-50%) scale(1.2);
+        }
+
+        .moon {
+            width: 6vh;
+            height: 6vh;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/FullMoon2010.jpg/600px-FullMoon2010.jpg');
+            box-shadow: inset -8px -8px 12px rgba(0,0,0,0.8);
+        }
+
+        /* СОНЦЕ */
+        .sun {
+            width: 77vh;
+            height: 77vh;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg/1024px-The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg');
+            box-shadow: 0 0 70px 15px rgba(255, 80, 0, 0.5);
+            animation: rotate-object 220s linear infinite;
+        }
+
+        /* МАРС */
+        .mars {
+            width: 38vh;
+            height: 38vh;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/800px-OSIRIS_Mars_true_color.jpg');
+            animation: rotate-object 65s linear infinite;
+        }
+
+        @keyframes rotate-object {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .space-link:hover {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+
+        .corona-glow {
+            position: absolute;
+            width: 82vh;
+            height: 82vh;
+            background: radial-gradient(circle, rgba(255, 100, 0, 0.2) 0%, transparent 75%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="viewport">
+        
+        <div class="earth-system">
+            <a href="https://uk.wikipedia.org/wiki/Земля" target="_blank" class="space-link">
+                <div class="object earth"></div>
+            </a>
+            
+            <div class="moon-orbit">
+                <a href="https://uk.wikipedia.org/wiki/Місяць" target="_blank" class="moon-link">
+                    <div class="object moon"></div>
+                </a>
+            </div>
+        </div>
+
+        <div style="position: relative; display: flex; justify-content: center; align-items: center;">
+            <div class="corona-glow"></div>
+            <a href="https://uk.wikipedia.org/wiki/Сонце" target="_blank" class="space-link">
+                <div class="object sun"></div>
+            </a>
+        </div>
+
+        <a href="https://uk.wikipedia.org/wiki/Марс" target="_blank" class="space-link">
+            <div class="object mars"></div>
+        </a>
+    </div>
+
+</body>
+</html>
