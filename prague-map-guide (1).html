@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Прага — карта маршрутов</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root{
+    --bg:#141a34; --bg-2:#1b2244; --panel:#202a52; --card:#1c2448; --card-hover:#242e5a;
+    --text:#f2ecd9; --text-dim:#a9a8c4; --gold:#dba936; --brick:#c06b3e; --teal:#38b2a6;
+    --line-a:#57a24a; --line-b:#f0c300; --line-c:#e4432f; --tram:#c96a3b; --bus:#3e88c9;
+    --walk:#9391ab; --funi:#a06fd1; --radius:14px; --hairline: rgba(242,236,217,0.12);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--bg); color:var(--text); font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased; overflow:hidden;
+  }
+  ::selection{background:var(--gold); color:#1a1a1a;}
+  button{ font-family:inherit; }
+
+  /* ============ VIEW SWITCH ============ */
+  .view{ position:fixed; inset:0; overflow-y:auto; }
+  .view.hidden{ display:none; }
+
+  /* ============ LANDING ============ */
+  #landing{
+    background:
+      radial-gradient(ellipse 900px 550px at 12% -10%, rgba(219,169,54,0.14), transparent 60%),
+      radial-gradient(ellipse 800px 550px at 100% 10%, rgba(56,178,166,0.10), transparent 55%),
+      var(--bg);
+  }
+  .skyline{
+    position:absolute; left:0; right:0; bottom:0; height:80px; pointer-events:none; opacity:0.35;
+    background-repeat:repeat-x; background-size:820px 80px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='820' height='70' viewBox='0 0 820 70'%3E%3Cg fill='%23dba936' fill-opacity='0.5'%3E%3Crect x='0' y='40' width='40' height='30'/%3E%3Cpolygon points='20,10 30,40 10,40'/%3E%3Crect x='60' y='30' width='30' height='40'/%3E%3Ccircle cx='75' cy='20' r='9'/%3E%3Crect x='110' y='45' width='60' height='25'/%3E%3Cpolygon points='120,45 130,25 140,45'/%3E%3Cpolygon points='150,45 160,25 170,45'/%3E%3Crect x='200' y='20' width='18' height='50'/%3E%3Cpolygon points='200,20 209,2 218,20'/%3E%3Crect x='240' y='35' width='45' height='35'/%3E%3Ccircle cx='262' cy='25' r='8'/%3E%3Crect x='310' y='42' width='70' height='28'/%3E%3Cpolygon points='320,42 335,18 350,42'/%3E%3Cpolygon points='355,42 365,20 375,42'/%3E%3Crect x='410' y='15' width='16' height='55'/%3E%3Cpolygon points='410,15 418,0 426,15'/%3E%3Crect x='450' y='38' width='34' height='32'/%3E%3Ccircle cx='467' cy='27' r='7'/%3E%3Crect x='510' y='44' width='55' height='26'/%3E%3Cpolygon points='520,44 532,22 544,44'/%3E%3Crect x='600' y='22' width='18' height='48'/%3E%3Cpolygon points='600,22 609,4 618,22'/%3E%3Crect x='650' y='36' width='40' height='34'/%3E%3Ccircle cx='670' cy='25' r='8'/%3E%3Crect x='720' y='45' width='60' height='25'/%3E%3Cpolygon points='730,45 745,20 760,45'/%3E%3C/g%3E%3C/svg%3E");
+  }
+  .landing-inner{
+    max-width:960px; margin:0 auto; padding:9vh 6vw 60px; position:relative; z-index:1;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--teal); margin:0 0 18px;
+  }
+  h1.hero{
+    font-family:'Fraunces',serif; font-weight:700; font-size:clamp(40px,7vw,84px); line-height:0.98;
+    margin:0 0 22px; letter-spacing:-0.01em;
+  }
+  h1.hero em{ font-style:italic; font-weight:400; color:var(--gold); }
+  .lede{ max-width:620px; color:var(--text-dim); font-size:17px; line-height:1.65; margin:0 0 44px; }
+
+  .feature-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-bottom:52px; }
+  .feature{
+    background:var(--card); border:1px solid var(--hairline); border-radius:var(--radius); padding:22px;
+  }
+  .feature .num{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--gold); letter-spacing:.1em; }
+  .feature h4{ font-family:'Fraunces',serif; font-size:19px; margin:10px 0 8px; font-weight:600; }
+  .feature p{ font-size:13.5px; color:var(--text-dim); line-height:1.55; margin:0; }
+
+  .stat-row{ display:flex; gap:36px; flex-wrap:wrap; margin-bottom:48px; }
+  .stat b{ display:block; font-family:'Fraunces',serif; font-size:30px; color:var(--text); }
+  .stat span{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.08em; }
+
+  .cta-btn{
+    background:var(--gold); color:#1a1608; border:none; padding:18px 34px; border-radius:999px;
+    font-size:16px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:10px;
+    transition:.18s ease; box-shadow:0 8px 24px rgba(219,169,54,0.25);
+  }
+  .cta-btn:hover{ transform:translateY(-2px); box-shadow:0 12px 30px rgba(219,169,54,0.35); }
+  .cta-sub{ margin-top:14px; font-size:12.5px; color:var(--text-dim); }
+
+  /* ============ MAP APP ============ */
+  #appview{ display:flex; flex-direction:column; height:100%; }
+  .topbar{
+    display:flex; align-items:center; gap:16px; padding:14px 20px; border-bottom:1px solid var(--hairline);
+    background:var(--bg-2); flex-shrink:0; flex-wrap:wrap;
+  }
+  .back-btn{
+    background:var(--panel); border:1px solid var(--hairline); color:var(--text); border-radius:999px;
+    padding:9px 16px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; flex-shrink:0;
+  }
+  .back-btn:hover{ background:var(--card-hover); }
+  .topbar-title{ font-family:'Fraunces',serif; font-size:19px; flex-shrink:0; }
+  .hub-select{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:auto; }
+  .hub-label{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.1em; }
+  .hub-btn{
+    font-size:12.5px; font-weight:600; background:var(--panel); color:var(--text-dim);
+    border:1px solid var(--hairline); padding:8px 13px; border-radius:999px; cursor:pointer; transition:.15s;
+  }
+  .hub-btn:hover{ background:var(--card-hover); color:var(--text); }
+  .hub-btn.active{ background:var(--gold); color:#1a1608; border-color:var(--gold); }
+
+  .app-body{ flex:1; display:flex; min-height:0; position:relative; }
+
+  #sidebar{
+    width:360px; flex-shrink:0; border-right:1px solid var(--hairline); background:var(--bg-2);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .sidebar-controls{ padding:14px 16px; border-bottom:1px solid var(--hairline); flex-shrink:0; }
+  .search-wrap{ position:relative; margin-bottom:10px; }
+  .search-wrap input{
+    width:100%; font-size:13.5px; background:var(--panel); border:1px solid var(--hairline); color:var(--text);
+    padding:9px 12px 9px 32px; border-radius:999px; outline:none;
+  }
+  .search-wrap input:focus{ border-color:var(--gold); }
+  .search-wrap::before{ content:"⚲"; position:absolute; left:12px; top:50%; transform:translateY(-50%) rotate(45deg); color:var(--text-dim); font-size:13px; }
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{
+    font-size:11.5px; font-weight:600; padding:6px 11px; border-radius:999px; border:1px solid var(--hairline);
+    background:transparent; color:var(--text-dim); cursor:pointer; transition:.15s;
+  }
+  .chip:hover{ color:var(--text); }
+  .chip.active{ background:var(--teal); border-color:var(--teal); color:#0d2422; }
+
+  .sidebar-list{ flex:1; overflow-y:auto; padding:10px; }
+  .place-item{
+    display:flex; gap:12px; align-items:flex-start; padding:12px; border-radius:10px; cursor:pointer;
+    border:1px solid transparent; transition:.15s; margin-bottom:4px;
+  }
+  .place-item:hover, .place-item.active{ background:var(--card-hover); border-color:var(--hairline); }
+  .place-item .pi-icon{
+    width:34px; height:34px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:16px;
+  }
+  .place-item .pi-text h5{ margin:0 0 2px; font-family:'Fraunces',serif; font-size:14.5px; font-weight:600; }
+  .place-item .pi-text .pi-meta{ font-size:11.5px; color:var(--text-dim); }
+  .place-item .pi-price{ margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--gold); flex-shrink:0; padding-top:6px; }
+
+  #map{ flex:1; }
+  .leaflet-container{ background:#141a34; font-family:'Inter',sans-serif; }
+
+  .map-legend{
+    position:absolute; left:16px; bottom:16px; z-index:400; background:rgba(27,34,68,0.92);
+    border:1px solid var(--hairline); border-radius:10px; padding:10px 14px; font-size:11px; color:var(--text-dim);
+    backdrop-filter:blur(6px); max-width:200px; line-height:1.9;
+  }
+  .map-legend .lg-item{ display:flex; align-items:center; gap:8px; }
+  .lg-dot{ width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+  .sidebar-toggle{
+    display:none; position:absolute; bottom:20px; left:50%; transform:translateX(-50%); z-index:450;
+    background:var(--gold); color:#1a1608; border:none; border-radius:999px; padding:12px 22px;
+    font-size:13px; font-weight:700; box-shadow:0 8px 20px rgba(0,0,0,0.35); cursor:pointer;
+  }
+
+  /* marker styling */
+  .prague-marker{ display:flex; align-items:center; justify-content:center; border-radius:50%; box-shadow:0 2px 8px rgba(0,0,0,0.4); border:2px solid rgba(20,26,52,0.8); font-size:16px; }
+  .hub-marker{ display:flex; align-items:center; justify-content:center; font-size:20px; filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5)); }
+  .leaflet-popup-content-wrapper{ background:var(--panel); color:var(--text); border-radius:10px; }
+  .leaflet-popup-tip{ background:var(--panel); }
+  .popup-name{ font-family:'Fraunces',serif; font-size:15px; margin:0 0 4px; }
+  .popup-price{ font-family:'IBM Plex Mono',monospace; color:var(--gold); font-size:12.5px; margin-bottom:8px;}
+  .popup-btn{ background:var(--teal); color:#0d2422; border:none; border-radius:999px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; }
+
+  /* ============ DRAWER (shared) ============ */
+  .backdrop{
+    position:fixed; inset:0; background:rgba(10,12,26,0.6); backdrop-filter:blur(2px);
+    opacity:0; pointer-events:none; transition:opacity .25s ease; z-index:600;
+  }
+  .backdrop.open{ opacity:1; pointer-events:auto; }
+  .drawer{
+    position:fixed; top:0; right:0; height:100%; width:min(480px,100%); background:var(--bg-2);
+    border-left:1px solid var(--hairline); transform:translateX(100%); transition:transform .3s cubic-bezier(.2,.8,.2,1);
+    z-index:601; overflow-y:auto;
+  }
+  .drawer.open{ transform:translateX(0); }
+  .drawer-inner{ padding:30px 28px 60px; }
+  .close-btn{
+    position:sticky; top:16px; float:right; margin-top:-6px; background:var(--panel); border:1px solid var(--hairline);
+    color:var(--text); width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:15px;
+  }
+  .close-btn:hover{ background:var(--card-hover); }
+  .drawer .icon-big{ font-size:40px; }
+  .drawer .cat-tag{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--teal); display:block; margin:12px 0 6px; }
+  .drawer h2{ font-family:'Fraunces',serif; font-size:28px; margin:0 0 4px; line-height:1.05; }
+  .drawer .district{ color:var(--text-dim); font-size:13px; margin-bottom:16px; }
+  .drawer .long-desc{ font-size:14px; line-height:1.65; color:var(--text); margin-bottom:24px; }
+  .section-label{ font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.14em; color:var(--gold); margin:0 0 10px; display:flex; align-items:center; gap:8px; }
+  .section-label::after{ content:""; flex:1; height:1px; background:var(--hairline); }
+  .tickets{ display:flex; flex-direction:column; gap:8px; margin-bottom:26px; }
+  .ticket{ display:flex; justify-content:space-between; align-items:center; gap:14px; background:var(--panel); border:1px dashed rgba(219,169,54,0.4); border-radius:10px; padding:11px 14px; }
+  .ticket .label{ font-size:12.5px; line-height:1.4; }
+  .ticket .label .note{ display:block; font-size:11px; color:var(--text-dim); margin-top:2px; }
+  .ticket .amount{ font-family:'IBM Plex Mono',monospace; font-weight:600; color:var(--gold); font-size:14px; white-space:nowrap;}
+  .hub-note{ font-size:12px; color:var(--text-dim); margin-bottom:12px; }
+  .hub-note b{ color:var(--teal); }
+  .routes{ display:flex; flex-direction:column; gap:9px; margin-bottom:22px; }
+  .route{ display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; background:#10152c; border:1px solid var(--hairline); border-radius:10px; padding:11px 14px; font-family:'IBM Plex Mono',monospace; }
+  .route .badge{ width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; color:#0c0c14; flex-shrink:0; }
+  .badge.mode-metro-A{ background:var(--line-a); } .badge.mode-metro-B{ background:var(--line-b); } .badge.mode-metro-C{ background:var(--line-c); }
+  .badge.mode-tram{ background:var(--tram); } .badge.mode-bus{ background:var(--bus); color:#fff; } .badge.mode-walk{ background:var(--walk); } .badge.mode-funicular{ background:var(--funi); }
+  .route .info{ display:flex; flex-direction:column; gap:2px; }
+  .route .info .label{ font-family:'Inter',sans-serif; font-size:12.5px; color:var(--text); line-height:1.4; }
+  .route .info .time{ font-size:11px; color:var(--teal); }
+  .route .price{ font-weight:600; color:var(--gold); font-size:13.5px; text-align:right; white-space:nowrap; }
+  .route .route-link{
+    grid-column:1 / -1; font-family:'Inter',sans-serif; font-size:11.5px; font-weight:600;
+    color:var(--teal); text-decoration:none; border-top:1px solid var(--hairline); margin-top:2px;
+    padding-top:8px; display:flex; align-items:center; gap:5px;
+  }
+  .route .route-link:hover{ color:var(--gold); text-decoration:underline; }
+  .place-maps-link{
+    display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--teal);
+    text-decoration:none; margin-bottom:22px; border:1px solid var(--hairline); border-radius:999px;
+    padding:7px 14px;
+  }
+  .place-maps-link:hover{ color:var(--gold); border-color:var(--gold); }
+  .disclaimer{ font-size:11px; color:var(--text-dim); line-height:1.6; border-top:1px solid var(--hairline); padding-top:14px; margin-top:6px; }
+
+  @media (max-width:860px){
+    .feature-row{ grid-template-columns:1fr; }
+    #sidebar{
+      position:absolute; z-index:500; left:0; right:0; bottom:0; top:auto; width:100%; height:70%;
+      border-right:none; border-top:1px solid var(--hairline); border-radius:18px 18px 0 0;
+      transform:translateY(100%); transition:transform .3s ease;
+    }
+    #sidebar.open{ transform:translateY(0); }
+    .sidebar-toggle{ display:block; }
+    .topbar{ gap:10px; }
+    .topbar-title{ display:none; }
+    .drawer{ width:100%; }
+  }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+
+<!-- ============ LANDING VIEW ============ -->
+<div id="landing" class="view">
+  <div class="skyline"></div>
+  <div class="landing-inner">
+    <p class="eyebrow">Пешеходно-транспортный гид · Praha</p>
+    <h1 class="hero">Прага на<br><em>одной карте.</em></h1>
+    <p class="lede">Этот сайт помогает спланировать прогулку по Праге: вы выбираете достопримечательность на карте — и сразу видите цену входа и все способы туда добраться — пешком, на метро, трамвае или автобусе, — с временем в пути и стоимостью проезда.</p>
+
+    <div class="feature-row">
+      <div class="feature">
+        <span class="num">01</span>
+        <h4>Карта города</h4>
+        <p>12 главных мест Праги отмечены на карте по районам и категориям — замки, мосты, музеи, смотровые площадки, парки.</p>
+      </div>
+      <div class="feature">
+        <span class="num">02</span>
+        <h4>Маршрут за секунду</h4>
+        <p>Клик по метке — и вы видите все варианты, как добраться: пешком, метро, трамвай, автобус, фуникулёр.</p>
+      </div>
+      <div class="feature">
+        <span class="num">03</span>
+        <h4>Цены сразу видны</h4>
+        <p>Стоимость входного билета и цена проезда показаны рядом — планировать бюджет дня становится проще.</p>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat"><b>12</b><span>Мест на карте</span></div>
+      <div class="stat"><b>3</b><span>Точки отправления</span></div>
+      <div class="stat"><b>5</b><span>Видов транспорта</span></div>
+    </div>
+
+    <button class="cta-btn" onclick="goToApp()">Открыть карту Праги →</button>
+    <p class="cta-sub">Внутри можно менять точку отправления и фильтровать места по категориям.</p>
+  </div>
+</div>
+
+<!-- ============ MAP APP VIEW ============ -->
+<div id="appview" class="view hidden">
+  <div class="topbar">
+    <button class="back-btn" onclick="goToLanding()">← Назад</button>
+    <span class="topbar-title">Карта Праги</span>
+    <div class="hub-select">
+      <span class="hub-label">Отправление:</span>
+      <div id="hubButtons" style="display:inline-flex; gap:8px; flex-wrap:wrap;"></div>
+    </div>
+  </div>
+
+  <div class="app-body">
+    <div id="sidebar">
+      <div class="sidebar-controls">
+        <div class="search-wrap"><input type="text" id="search" placeholder="Найти место…"></div>
+        <div class="chips" id="chips"></div>
+      </div>
+      <div class="sidebar-list" id="sidebarList"></div>
+    </div>
+
+    <div id="map"></div>
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">Список мест</button>
+  </div>
+</div>
+
+<div class="backdrop" id="backdrop"></div>
+<div class="drawer" id="drawer"><div class="drawer-inner" id="drawerContent"></div></div>
+
+<script>
+const HUBS = [
+  {id:'vaclavak', name:'Вацлавская пл.', full:'Вацлавская площадь', sub:'центр · метро A·B·C', lat:50.0805, lng:14.4278},
+  {id:'staromestske', name:'Староместская пл.', full:'Староместская площадь', sub:'Старе Место', lat:50.0870, lng:14.4207},
+  {id:'hlavni', name:'Главный вокзал', full:'Главный вокзал', sub:'Praha hl.n. · метро C', lat:50.0830, lng:14.4357}
+];
+
+const CAT_COLOR = {
+  'Замки и крепости':'#c06b3e',
+  'Мосты и площади':'#38b2a6',
+  'Музеи':'#dba936',
+  'Смотровые площадки':'#a06fd1',
+  'Парки и сады':'#57a24a'
+};
+
+const MODE_META = { metro:{name:'Метро'}, tram:{name:'Трамвай'}, bus:{name:'Автобус'}, walk:{name:'Пешком'}, funicular:{name:'Фуникулёр'} };
+function badgeClass(r){ if(r.mode==='metro') return 'mode-metro-'+(r.line[0]); if(r.mode==='walk') return 'mode-walk'; if(r.mode==='funicular') return 'mode-funicular'; return 'mode-'+r.mode; }
+function badgeText(r){ if(r.mode==='walk') return '🚶'; if(r.mode==='funicular') return '🚡'; return r.line; }
+
+/* Google Maps link builders */
+function gmapsDirectionsUrl(hub, a, mode){
+  const travelmode = (mode === 'walk') ? 'walking' : 'transit';
+  return `https://www.google.com/maps/dir/?api=1&origin=${hub.lat},${hub.lng}&destination=${a.lat},${a.lng}&travelmode=${travelmode}`;
+}
+function gmapsPlaceUrl(a){
+  return `https://www.google.com/maps/search/?api=1&query=${a.lat},${a.lng}`;
+}
+
+const ATTRACTIONS = [
+{ id:'hrad', icon:'🏰', name:'Пражский Град', category:'Замки и крепости', district:'Градчаны', lat:50.0910, lng:14.4016,
+  desc:'Крупнейший замковый комплекс в мире — резиденция президента, собор Св. Вита, Золотая улочка.',
+  long:'Пражский Град возвышается над городом уже больше тысячи лет — здесь короновали чешских королей, здесь же сегодня работает президент страны. На территории — готический собор Св. Вита, старый королевский дворец, базилика Св. Иржи и крошечная Золотая улочка с домиками ремесленников.',
+  tickets:[{label:'Circuit B: дворец, базилика Св. Иржи, Золотая улочка, собор (нефы)', note:'льготный 150 Kč', price:'300 Kč'},{label:'Смотровая площадка южной башни собора Св. Вита', price:'250 Kč'}],
+  routes:{
+    vaclavak:[{mode:'metro', line:'A', label:'Metro A: Muzeum → Malostranská (2 ост.) + трамвай 22 (2 ост.)', time:'≈16 мин', price:'30 Kč'},{mode:'tram', line:'22', label:'Трамвай 22 от ост. Národní třída → Pražský hrad', time:'≈20 мин, включая 5 мин пешком', price:'30 Kč'},{mode:'walk', label:'Пешком через Малую Страну', time:'≈32 мин · 2,5 км', price:'0 Kč'}],
+    staromestske:[{mode:'tram', line:'22', label:'Трамвай 22: Malostranské náměstí → Pražský hrad', time:'≈10 мин', price:'30 Kč'},{mode:'walk', label:'Пешком через Карлов мост и Малую Страну', time:'≈20 мин · 1,7 км', price:'0 Kč'}],
+    hlavni:[{mode:'metro', line:'C', label:'Metro C → Muzeum, пересадка на A → Malostranská + трамвай 22', time:'≈22 мин', price:'40 Kč'},{mode:'walk', label:'Пешком', time:'≈38 мин · 3 км', price:'0 Kč'}]
+  }},
+{ id:'vysehrad', icon:'🛡️', name:'Вышеград', category:'Замки и крепости', district:'Вышеград', lat:50.0642, lng:14.4188,
+  desc:'Древняя крепость над Влтавой с готическим собором, казематами и видом на реку без толп туристов.',
+  long:'Легендарная крепость, с которой, по преданию, начиналась Прага. Здесь тише, чем в Граде: старые крепостные стены, базилика Св. Петра и Павла, романтичное Вышеградское кладбище с могилами Дворжака и Сметаны, и одна из лучших панорам города.',
+  tickets:[{label:'Территория крепости и парк', price:'бесплатно'},{label:'Вышеградские казематы + Галерея скульптур', note:'льготный 50 Kč', price:'80 Kč'}],
+  routes:{
+    vaclavak:[{mode:'metro', line:'C', label:'Metro C: Muzeum → Vyšehrad (2 ост.)', time:'≈8 мин', price:'30 Kč'},{mode:'walk', label:'Пешком вдоль набережной Влтавы', time:'≈40 мин · 3,3 км', price:'0 Kč'}],
+    staromestske:[{mode:'tram', line:'18', label:'Трамвай 18: Karlovy lázně → Výtoň + пешком 10 мин', time:'≈25 мин', price:'30 Kč'},{mode:'walk', label:'Пешком', time:'≈35 мин', price:'0 Kč'}],
+    hlavni:[{mode:'metro', line:'C', label:'Metro C: Hlavní nádraží → Vyšehrad (3 ост.)', time:'≈9 мин', price:'30 Kč'}]
+  }},
+{ id:'karluvmost', icon:'🌉', name:'Карлов мост', category:'Мосты и площади', district:'Старе Место / Мала Страна', lat:50.0865, lng:14.4114,
+  desc:'Готический мост XIV века со статуями святых — самое узнаваемое место Праги.',
+  long:'Построенный по указу Карла IV в 1357 году, мост соединяет Старе Место и Малую Страну. На нём — 30 барочных статуй святых, уличные музыканты и художники, а на рассвете — почти пустая брусчатка, которую стоит увидеть хотя бы раз.',
+  tickets:[{label:'Проход по мосту', price:'бесплатно'},{label:'Староместская мостовая башня — смотровая площадка', price:'250 Kč'}],
+  routes:{
+    vaclavak:[{mode:'metro', line:'A', label:'Metro A: Můstek → Staroměstská (1 ост.) + пешком 5 мин', time:'≈10 мин', price:'30 Kč'},{mode:'walk', label:'Пешком через Старе Место', time:'≈18 мин · 1,4 км', price:'0 Kč'}],
+    staromestske:[{mode:'walk', label:'Пешком по улице Karlova', time:'≈6 мин · 500 м', price:'0 Kč'}],
+    hlavni:[{mode:'metro', line:'C', label:'Metro C → пересадка на A → Staroměstská + пешком', time:'≈18 мин', price:'40 Kč'},{mode:'walk', label:'Пешком', time:'≈28 мин', price:'0 Kč'}]
+  }},
+{ id:'staromak', icon:'🕰️', name:'Староместская площадь', category:'Мосты и площади', district:'Старе Место', lat:50.0870, lng:14.4207,
+  desc:'Сердце старого города: Тынский храм, памятник Яну Гусу и знаменитые Пражские куранты.',
+  long:'Главная площадь Праги с XII века — окружена цветными фасадами, готическим Тынским храмом и барочным костёлом Св. Микулаша. Раз в час здесь собирается толпа, чтобы увидеть бой курантов Орлой на Староместской ратуше.',
+  tickets:[{label:'Площадь и бой курантов (Орлой)', price:'бесплатно'}],
+  routes:{
+    vaclavak:[{mode:'walk', label:'Пешком по улице Na Příkopě', time:'≈12 мин · 900 м', price:'0 Kč'},{mode:'metro', line:'A', label:'Metro A: Můstek → Staroměstská (1 ост.)', time:'≈5 мин', price:'30 Kč'}],
+    staromestske:[{mode:'walk', label:'Вы уже на месте', time:'0 мин', price:'0 Kč'}],
+    hlavni:[{mode:'metro', line:'C', label:'Metro C → пересадка на A → Staroměstská', time:'≈15 мин', price:'30 Kč'}]
+  }},
+{ id:'malostr', icon:'⛪', name:'Малостранская площадь', category:'Мосты и площади', district:'Мала Страна', lat:50.0879, lng:14.4038,
+  desc:'Барочная площадь с костёлом Св. Микулаша у подножия Града.',
+  long:'Одна из красивейших площадей города, доминанта которой — купол костёла Св. Микулаша, шедевр пражского барокко с фресками и органом, на котором когда-то играл Моцарт.',
+  tickets:[{label:'Площадь', price:'бесплатно'},{label:'Костёл Св. Микулаша', price:'70 Kč'}],
+  routes:{
+    vaclavak:[{mode:'metro', line:'A', label:'Metro A: Můstek → Malostranská (2 ост.)', time:'≈7 мин', price:'30 Kč'},{mode:'walk', label:'Пешком через Карлов мост', time:'≈25 мин', price:'0 Kč'}],
+    staromestske:[{mode:'walk', label:'Пешком через Карлов мост', time:'≈10 мин', price:'0 Kč'}],
+    hlavni:[{mode:'metro', line:'C', label:'Metro C → пересадка на A → Malostranská', time:'≈18 мин', price:'40 Kč'}]
+  }},
+{ id:'natmuz', icon:'🏛️', name:'Национальный музей', category:'Музеи', district:'Нове Место', lat:50.0810, lng:14.4306,
+  desc:'Крупнейший музей Чехии на вершине Вацлавской площади — естественная история и национальные коллекции.',
+  long:'Величественное здание неоренессанса венчает Вацлавскую площадь. Внутри — палеонтологические и минералогические коллекции, историческая экспозиция и роскошный Пантеон под куполом.',
+  tickets:[{label:'Основная экспозиция', note:'льготный 180 Kč', price:'260 Kč'}],
+  routes:{
+    vaclavak:[{mode:'walk', label:'Вы уже рядом, на площади', time:'≈2 мин', price:'0 Kč'}],
+    staromestske:[{mode:'walk', label:'Пешком по Na Příkopě', time:'≈15 мин', price:'0 Kč'},{mode:'metro', line:'A', label:'Metro A: Staroměstská → Můstek + пешком', time:'≈8 мин', price:'30 Kč'}],
+    hlavni:[{mode:'metro', line:'C', label:'Metro C: Hlavní nádraží → Muzeum (1 ост.)', time:'≈4 мин', price:'30 Kč'}]
+  }},
+{ id:'kafka', icon:'🖋️', name:'Музей Кафки', category:'Музеи', district:'Мала Страна', lat:50.0862, lng:14.4079,
+  desc:'Атмосферная экспозиция «Город К.» о Праге и Франце Кафке в здании у реки.',
+  long:'Мрачновато-поэтичная инсталляция, посвящённая жизни писателя и его отношениям с родным городом. Во дворе — знаменитый фонтан-скульптура Давида Черного с писающими мужчинами.',
+  tickets:[{label:'Постоянная экспозиция «Город К.»', note:'льготный 210 Kč', price:'300 Kč'}],
+  routes:{
+    vaclavak:[{mode:'metro', line:'A', label:'Metro A: Můstek → Malostranská + пешком 8 мин', time:'≈15 мин', price:'30 Kč'},{mode:'walk', label:'Пешком', time:'≈25 мин', price:'0 Kč'}],
+    staromestske:[{mode:'walk', label:'Пешком через Карлов мост', time:'≈10 мин', price:'0 Kč'}],
+    hlavni:[{mode:'metro', line:'C', label:'Metro C → пересадка на A → Malostranská + пешком', time:'≈20 мин', price:'40 Kč'}]
+  }},
+{ id:'komunismus', icon:'☭', name:'Музей коммунизма', category:'Музеи', district:'Нове Место', lat:50.0868, lng:14.4293,
+  desc:'Экспозиция о жизни в Чехословакии за железным занавесом — от пропаганды до Бархатной революции.',
+  long:'Реконструированные интерьеры советской эпохи, пропагандистские плакаты, документальные кадры о революции 1989 года — компактный и очень наглядный музей в двух шагах от Вацлавской площади.',
+  tickets:[{label:'Постоянная экспозиция', note:'льготный 290 Kč', price:'380 Kč'}],
+  routes:{ vaclavak:[{mode:'walk', label:'Пешком', time:'≈8 мин', price:'0 Kč'}], staromestske:[{mode:'walk', label:'Пешком', time:'≈10 мин', price:'0 Kč'}], hlavni:[{mode:'walk', label:'Пешком', time:'≈14 мин', price:'0 Kč'}] }},
+{ id:'petrin', icon:'🗼', name:'Петршинская башня', category:'Смотровые площадки', district:'Петршин', lat:50.0836, lng:14.3947,
+  desc:'Уменьшенная копия Эйфелевой башни на холме с фуникулёром и лучшим видом на крыши Праги.',
+  long:'Построенная в 1891 году как чешский ответ Парижу, башня возвышается над садами Петршина. Наверх ведёт фуникулёр — билет на него включён в обычный проездной. С площадки на самом верху башни — панорама всего города.',
+  tickets:[{label:'Подъём на смотровую площадку башни', note:'льготный 80 Kč', price:'150 Kč'},{label:'Фуникулёр (в одну сторону)', note:'входит в обычный проездной билет', price:'по тарифу ниже'}],
+  routes:{
+    vaclavak:[{mode:'tram', line:'9', label:'Трамвай 9 от Národní třída → Újezd + фуникулёр', time:'≈25 мин', price:'30 Kč'},{mode:'walk', label:'Пешком через сады Петршина', time:'≈40 мин', price:'0 Kč'}],
+    staromestske:[{mode:'funicular', line:'F', label:'Пешком до ост. Újezd (15 мин) + фуникулёр (5 мин)', time:'≈20 мин', price:'30 Kč'}],
+    hlavni:[{mode:'metro', line:'C', label:'Metro C → Muzeum + трамвай 9 до Újezd + фуникулёр', time:'≈30 мин', price:'40 Kč'}]
+  }},
+{ id:'ratusha', icon:'⏰', name:'Староместская ратуша', category:'Смотровые площадки', district:'Старе Место', lat:50.0872, lng:14.4212,
+  desc:'Башня ратуши со знаменитыми астрономическими курантами и видом на всю площадь.',
+  long:'С вершины готической башни открывается лучший вид на красные крыши Старе Места и Тынский храм. У подножия — те самые куранты Орлой, старейшие действующие астрономические часы в мире.',
+  tickets:[{label:'Смотровая площадка башни ратуши', note:'льготный 150 Kč', price:'250 Kč'}],
+  routes:{
+    vaclavak:[{mode:'walk', label:'Пешком по Na Příkopě', time:'≈12 мин', price:'0 Kč'},{mode:'metro', line:'A', label:'Metro A: Můstek → Staroměstská', time:'≈5 мин', price:'30 Kč'}],
+    staromestske:[{mode:'walk', label:'Вы уже на месте', time:'0 мин', price:'0 Kč'}],
+    hlavni:[{mode:'metro', line:'C', label:'Metro C → пересадка на A → Staroměstská', time:'≈15 мин', price:'30 Kč'}]
+  }},
+{ id:'letna', icon:'🌳', name:'Летенские сады', category:'Парки и сады', district:'Летна', lat:50.0958, lng:14.4176,
+  desc:'Парк на холме над рекой с пивным баром на террасе и панорамой Карлова моста.',
+  long:'Просторный парк, куда местные приходят на пробежку, пикник и закат. С террасы у метронома, где раньше стоял памятник Сталину, — один из лучших видов на Влтаву и Старе Место.',
+  tickets:[{label:'Вход в парк', price:'бесплатно'}],
+  routes:{
+    vaclavak:[{mode:'tram', line:'8', label:'Трамвай 8: Náměstí Republiky → Letenské sady', time:'≈18 мин + 10 мин пешком до остановки', price:'30 Kč'},{mode:'walk', label:'Пешком через мост Штефаника', time:'≈28 мин', price:'0 Kč'}],
+    staromestske:[{mode:'tram', line:'1', label:'Трамвай 1: Staroměstská → Letenské sady', time:'≈8 мин', price:'30 Kč'},{mode:'walk', label:'Пешком', time:'≈18 мин', price:'0 Kč'}],
+    hlavni:[{mode:'tram', line:'8', label:'Трамвай 8 с пересадкой до Letenské sady', time:'≈25 мин', price:'30 Kč'}]
+  }},
+{ id:'zoo', icon:'🦁', name:'Пражский зоопарк', category:'Парки и сады', district:'Троя', lat:50.1171, lng:14.4058,
+  desc:'Один из лучших зоопарков Европы — гориллы, комодские вараны и канатная дорога над вольерами.',
+  long:'Расположенный в долине реки Troja, зоопарк славится программами разведения редких видов и удобной канатной дорогой, которая провозит гостей прямо над крышами вольеров.',
+  tickets:[{label:'Входной билет', note:'льготный 200 Kč', price:'300 Kč'}],
+  routes:{
+    vaclavak:[{mode:'metro', line:'C', label:'Metro C: Muzeum → Nádraží Holešovice (4 ост.) + автобус 112', time:'≈35 мин', price:'40 Kč'}],
+    staromestske:[{mode:'metro', line:'C', label:'До Metro C (Vltavská/Florenc) → Nádraží Holešovice + автобус 112', time:'≈38 мин', price:'40 Kč'}],
+    hlavni:[{mode:'metro', line:'C', label:'Metro C: Hlavní nádraží → Nádraží Holešovice + автобус 112', time:'≈30 мин', price:'40 Kč'}]
+  }}
+];
+
+let state = { hub:'vaclavak', category:'Все', query:'' };
+let map, markers = {}, hubMarker, routeLine, currentOpenId = null;
+
+/* ---------- VIEW SWITCHING ---------- */
+function goToApp(){
+  document.getElementById('landing').classList.add('hidden');
+  document.getElementById('appview').classList.remove('hidden');
+  if(!map) initMap();
+  setTimeout(()=>{ if(map) map.invalidateSize(); }, 60);
+}
+function goToLanding(){
+  document.getElementById('appview').classList.add('hidden');
+  document.getElementById('landing').classList.remove('hidden');
+  closeDrawer();
+}
+
+/* ---------- MAP ---------- */
+function initMap(){
+  map = L.map('map', {zoomControl:true}).setView([50.0840, 14.4180], 13.4);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:19
+  }).addTo(map);
+
+  ATTRACTIONS.forEach(a=>{
+    const icon = L.divIcon({
+      className:'', html:`<div class="prague-marker" style="width:34px;height:34px;background:${CAT_COLOR[a.category]}">${a.icon}</div>`,
+      iconSize:[34,34], iconAnchor:[17,17], popupAnchor:[0,-16]
+    });
+    const m = L.marker([a.lat, a.lng], {icon}).addTo(map);
+    m.bindPopup(`<div class="popup-name">${a.icon} ${a.name}</div><div class="popup-price">от ${a.tickets[0].price}</div><button class="popup-btn" onclick="openDrawer('${a.id}')">Маршрут и билет →</button> <a href="${gmapsPlaceUrl(a)}" target="_blank" rel="noopener" style="font-size:11px;color:#38b2a6;margin-left:6px;">Google Maps ↗</a>`);
+    markers[a.id] = m;
+  });
+
+  renderHubMarker();
+  renderLegend();
+}
+
+function renderLegend(){
+  const el = document.createElement('div');
+  el.className = 'map-legend';
+  el.innerHTML = Object.entries(CAT_COLOR).map(([cat,col])=>`<div class="lg-item"><span class="lg-dot" style="background:${col}"></span>${cat}</div>`).join('');
+  document.getElementById('map').appendChild(el);
+}
+
+function renderHubMarker(){
+  const hub = HUBS.find(h=>h.id===state.hub);
+  if(hubMarker) map.removeLayer(hubMarker);
+  const icon = L.divIcon({ className:'', html:`<div class="hub-marker">📍</div>`, iconSize:[26,26], iconAnchor:[13,24] });
+  hubMarker = L.marker([hub.lat, hub.lng], {icon, zIndexOffset:1000}).addTo(map);
+  hubMarker.bindTooltip(hub.full, {permanent:false, direction:'top'});
+}
+
+function updateRouteLine(){
+  if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
+  if(!currentOpenId) return;
+  const a = ATTRACTIONS.find(x=>x.id===currentOpenId);
+  const hub = HUBS.find(h=>h.id===state.hub);
+  routeLine = L.polyline([[hub.lat,hub.lng],[a.lat,a.lng]], {color:'#dba936', weight:2, dashArray:'2,8', opacity:0.7}).addTo(map);
+}
+
+/* ---------- HUBS / CHIPS / SEARCH ---------- */
+function renderHubs(){
+  const el = document.getElementById('hubButtons');
+  el.innerHTML = '';
+  HUBS.forEach(h=>{
+    const b = document.createElement('button');
+    b.className = 'hub-btn' + (state.hub===h.id ? ' active':'');
+    b.textContent = h.name;
+    b.title = h.sub;
+    b.onclick = ()=>{ state.hub = h.id; renderHubs(); if(map) renderHubMarker(); if(currentOpenId){ openDrawer(currentOpenId); } };
+    el.appendChild(b);
+  });
+}
+
+function uniqueCategories(){ return ['Все', ...new Set(ATTRACTIONS.map(a=>a.category))]; }
+function renderChips(){
+  const el = document.getElementById('chips');
+  el.innerHTML = '';
+  uniqueCategories().forEach(c=>{
+    const b = document.createElement('button');
+    b.className = 'chip' + (state.category===c ? ' active':'');
+    b.textContent = c;
+    b.onclick = ()=>{ state.category = c; renderChips(); renderSidebarList(); };
+    el.appendChild(b);
+  });
+}
+
+function filteredItems(){
+  const q = state.query.trim().toLowerCase();
+  return ATTRACTIONS.filter(a=>{
+    const catOk = state.category==='Все' || a.category===state.category;
+    const qOk = !q || a.name.toLowerCase().includes(q) || a.district.toLowerCase().includes(q);
+    return catOk && qOk;
+  });
+}
+
+function renderSidebarList(){
+  const list = document.getElementById('sidebarList');
+  list.innerHTML = '';
+  const items = filteredItems();
+  items.forEach(a=>{
+    const el = document.createElement('div');
+    el.className = 'place-item' + (currentOpenId===a.id ? ' active':'');
+    el.innerHTML = `
+      <div class="pi-icon" style="background:${CAT_COLOR[a.category]}">${a.icon}</div>
+      <div class="pi-text"><h5>${a.name}</h5><div class="pi-meta">${a.district}</div></div>
+      <div class="pi-price">${a.tickets[0].price}</div>
+    `;
+    el.onclick = ()=> openDrawer(a.id);
+    list.appendChild(el);
+  });
+  // fade markers not in filter
+  if(map){
+    ATTRACTIONS.forEach(a=>{
+      const inList = items.some(i=>i.id===a.id);
+      const el = markers[a.id].getElement();
+      if(el) el.style.opacity = inList ? '1' : '0.18';
+    });
+  }
+}
+
+/* ---------- DRAWER ---------- */
+function openDrawer(id){
+  currentOpenId = id;
+  const a = ATTRACTIONS.find(x=>x.id===id);
+  const hub = HUBS.find(h=>h.id===state.hub);
+  const routes = a.routes[state.hub];
+
+  const ticketsHtml = a.tickets.map(t=>`<div class="ticket"><div class="label">${t.label}${t.note?`<span class="note">${t.note}</span>`:''}</div><div class="amount">${t.price}</div></div>`).join('');
+  const routesHtml = routes.map(r=>`
+    <div class="route">
+      <div class="badge ${badgeClass(r)}">${badgeText(r)}</div>
+      <div class="info"><span class="label">${r.label}</span><span class="time">${MODE_META[r.mode].name} · ${r.time}</span></div>
+      <div class="price">${r.price}</div>
+      <a class="route-link" href="${gmapsDirectionsUrl(hub, a, r.mode)}" target="_blank" rel="noopener">🧭 Маршрут в Google Maps ↗</a>
+    </div>`).join('');
+
+  document.getElementById('drawerContent').innerHTML = `
+    <button class="close-btn" onclick="closeDrawer()">✕</button>
+    <div class="icon-big">${a.icon}</div>
+    <span class="cat-tag">${a.category}</span>
+    <h2>${a.name}</h2>
+    <div class="district">${a.district}</div>
+    <a class="place-maps-link" href="${gmapsPlaceUrl(a)}" target="_blank" rel="noopener">📍 Открыть место в Google Maps ↗</a>
+    <p class="long-desc">${a.long}</p>
+    <p class="section-label">Билеты</p>
+    <div class="tickets">${ticketsHtml}</div>
+    <p class="section-label">Как добраться</p>
+    <p class="hub-note">Маршруты рассчитаны от точки: <b>${hub.full}</b> (${hub.sub}). Пунктир на карте — воздушная линия до места, а не точный путь транспорта. У каждого варианта ниже — ссылка на построенный маршрут в Google Maps.</p>
+    <div class="routes">${routesHtml}</div>
+    <p class="disclaimer">Время в пути и цены на проезд — ориентировочные (тарифы PID: разовый билет на 30 мин — 30 Kč, на 90 мин — 40 Kč). Ссылки открывают Google Maps с реальным маршрутом между выбранной точкой отправления и местом — там же можно проверить актуальное расписание транспорта. Цены на билеты в достопримечательности уточняйте на официальных сайтах перед поездкой.</p>
+  `;
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('backdrop').classList.add('open');
+  renderSidebarList();
+  if(map){
+    updateRouteLine();
+    map.flyTo([a.lat, a.lng], 15, {duration:0.6});
+    markers[a.id].openPopup();
+  }
+  if(window.innerWidth<=860) document.getElementById('sidebar').classList.remove('open');
+}
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('backdrop').classList.remove('open');
+  currentOpenId = null;
+  if(routeLine && map){ map.removeLayer(routeLine); routeLine=null; }
+  renderSidebarList();
+}
+document.getElementById('backdrop').onclick = closeDrawer;
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
+document.getElementById('search').addEventListener('input', e=>{ state.query = e.target.value; renderSidebarList(); });
+
+function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
+
+renderHubs();
+renderChips();
+renderSidebarList();
+</script>
+</body>
+</html>
